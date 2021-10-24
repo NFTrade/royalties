@@ -178,14 +178,6 @@ contract('Royalties', (accounts) => {
       assert.equal(balance.toString(), '0');
     });
 
-    it('getAddressClaims should be equel to balanceOf same user', async () => {
-      // getting all claims by user
-      const user1Claimed = await royalties.getAddressClaims(user);
-      // getting balance by user
-      const balanceOfUser = await weth.balanceOf(user);
-      assert.equal(user1Claimed.toString(), balanceOfUser.toString());
-    });
-
     it('getting the sum of all tokens balances from getTokensBalance', async () => {
       // array of tokens
       const tokensArray = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
