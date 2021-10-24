@@ -34,8 +34,8 @@ contract Royalties is Ownable {
 
     mapping(address => uint256) private addressClaims;
 
-    event CommunityClaimed(address sender, address owner, uint256 amount, uint256 tokenID);
-    event CreatorClaimed(address sender, uint256 amount);
+    event CommunityClaimed(address owner, uint256 amount, uint256 tokenID);
+    event CreatorClaimed(uint256 amount);
     event RoyaltiesCreated(address collectionAddress);
 
     constructor(
@@ -116,6 +116,16 @@ contract Royalties is Ownable {
         return getTokenTotalRoyalties() - communityClaims[tokenID];
     }
 
+    /// @dev get token balances for each token from an array of tokenIDs
+    function getTokensBalance(uint256[] memory tokenIDs) public view returns (uint256) {
+        uint256 totalBalance = 0;
+        for (uint256 i = 0; i<tokenIDs.length; i++) {
+            uint256 balance = getTokenBalance(tokenIDs[i]);
+            totalBalance = (totalBalance + balance);
+        }
+        return totalBalance;
+    }
+
     /// @dev get address tot claims
     /// @return address total claims
     function getAddressClaims(address account) public view returns (uint256) {
@@ -132,14 +142,14 @@ contract Royalties is Ownable {
                 communityClaims[tokenID] = communityClaims[tokenID] + balance;
                 addressClaims[owner] = addressClaims[owner] + balance;
                 communityClaimed = communityClaimed + balance;
-                emit CommunityClaimed(msg.sender, owner, balance, tokenID);
+                emit CommunityClaimed(owner, balance, tokenID);
             }
         }
     }
 
     /// @dev claim community from an array of tokenIDs
     function claimCommunityBatch(uint256[] calldata tokenIDs) external {
-        for (uint i=0; i<tokenIDs.length; i++) {
+        for (uint256 i=0; i<tokenIDs.length; i++) {
             claimCommunity(tokenIDs[i]);
         }
     }
@@ -151,6 +161,6 @@ contract Royalties is Ownable {
         require(balance > 0, "No balance to claim");
         ERC20(tokenFeesAddress).transfer(creatorAddress, balance);
         creatorClaimed = creatorClaimed + balance;
-        emit CreatorClaimed(msg.sender, balance);
+        emit CreatorClaimed(balance);
     }
 }

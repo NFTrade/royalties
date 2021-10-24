@@ -2,6 +2,7 @@ const BigNumber = require('bignumber.js');
 const { assert } = require('chai');
 const chai = require('chai');
 const truffleAssert = require('truffle-assertions');
+
 const Royalties = artifacts.require('./Royalties.sol');
 const WETH = artifacts.require('./WETH.sol');
 const NFT = artifacts.require('./NFT.sol');
@@ -46,7 +47,6 @@ contract('Royalties', (accounts) => {
       await weth.transfer(royalties.address, takerFee);
       const creatorBalance = await royalties.getCreatorBalance();
       assert.equal(creatorBalance.toString(), (takerFee / 4).toString());
-      console.log('here');
     });
 
     it('creator claims', async () => {
@@ -117,39 +117,52 @@ contract('Royalties', (accounts) => {
     });
 
     it('claiming after collection size decrease should make the balance bigger - real balance POC', async () => {
+      // getting the token balance
       const tokenBalanceBeforeDecrease = await royalties.getTokenBalance('5');
+      // decreasing collection size
       await royalties.setCollectionSize('500');
+      // clamining royalty for creator
       await royalties.claimCreator({ from: creator });
+      // getting the new token balance
       const tokenBalanceAfterDecrease = await royalties.getTokenBalance('5');
       assert.isAbove(Number(tokenBalanceAfterDecrease), Number(tokenBalanceBeforeDecrease));
     });
 
     it('claiming after collection size decrease should make the balance bigger - determinant balance', async () => {
+      // getting the token balance
       const tokenBalanceBeforeDecrease = await royalties.getTokenTotalRoyalties();
+      // calculating the total community royalties
       const totalCommunityRoyalties = tokenBalanceBeforeDecrease * 500;
+      // decreasing the collection size
       await royalties.setCollectionSize('328');
-      const collectionSize = await royalties.getCollectionSize();
+      // calculating the expceted royalty per token
       const expectedCommunityRoyaltiesPerToken = totalCommunityRoyalties / 328;
+      // getting token total royalties
       const tokenBalanceAfterDecrease = await royalties.getTokenTotalRoyalties();
       assert.equal(tokenBalanceAfterDecrease.toString(), expectedCommunityRoyaltiesPerToken);
     });
 
     itShouldThrow('collection size cant change to bigger than its current size', async () => {
+      // trying to change the collection size to be bigger then its current size
       await royalties.setCollectionSize('2000');
     }, 'Cannot increase collection size');
 
     it('creator address changed, added funds and then creator claims', async () => {
+      // changing creator address
       await royalties.setCreatorAddress(user2);
       const takerFee = web3.utils.toWei('10');
       // send royalties to contract
       await weth.transfer(royalties.address, takerFee);
+      // getting creator balance before claiming
       const creatorBalance = await royalties.getCreatorBalance();
+      // creator claiming royalties
       await royalties.claimCreator({ from: user2 });
+      // getting user2 balance (the new creator)
       const balance = await weth.balanceOf(user2);
       assert.equal(creatorBalance.toString(), balance.toString());
     });
 
-    it('claimCommunityBatch', async () => {
+    it('claiming community batch from an array of tokenIDs', async () => {
       await royalties.setCollectionSize('10');
       // create 8 more nfts
       await Promise.all((new Array(8)).fill(1).map(() => nft.mint(user, '', {
@@ -165,10 +178,53 @@ contract('Royalties', (accounts) => {
       assert.equal(balance.toString(), '0');
     });
 
-    it('getAddressClaims should be equel to balanceOf same user', async () => {
-      const user1Claimed = await royalties.getAddressClaims(user);
-      const balanceOfUser = await weth.balanceOf(user);
-      assert.equal(user1Claimed.toString(), balanceOfUser.toString());
+    it('getting the sum of all tokens balances from getTokensBalance', async () => {
+      // array of tokens
+      const tokensArray = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+      // getting the sum from the contract function
+      const getTokensBalance = await royalties.getTokensBalance(tokensArray, {
+        from: user
+      });
+      // mimic of the function logic from contract
+      let tokensBalance = BigNumber(0);
+      const balances = await Promise.all(
+        tokensArray.map((tokenID) => royalties.getTokenBalance(tokenID))
+      );
+
+      balances.forEach((x) => {
+        tokensBalance = tokensBalance.plus(x);
+      });
+      // asserting to see if equal
+      assert.equal(getTokensBalance.toString(), tokensBalance.toString());
     });
+
+    /* // STRESS TEST - UNCOMMENT AND COMMENT ALL OTHER TESTS
+    it('claiming community batch from an array of tokenIDs stress test', async () => {
+      // await royalties.setCollectionSize(accounts.length);
+      const takerFee = web3.utils.toWei('100');
+      // send royalties to contract
+      await weth.transfer(royalties.address, takerFee);
+
+      const tokens = [];
+      for (let i = 1; i < accounts.length; i++) {
+        tokens.push(i);
+      }
+
+      const currentUser = accounts[Math.round(accounts.length / 2)];
+      await Promise.all((tokens.map(() => nft.mint(currentUser, '', {
+        from: creator
+      }))));
+
+      const tokensBalance = await royalties.getTokensBalance(tokens, {
+        from: currentUser
+      });
+
+      await royalties.claimCommunityBatch(tokens, {
+        from: currentUser
+      });
+      // claim creator happend on previous test - no balance left
+      const balance = await weth.balanceOf(currentUser);
+      assert.equal(balance.toString(), tokensBalance.toString());
+    }); */
   });
 });
