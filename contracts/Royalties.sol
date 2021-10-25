@@ -67,10 +67,14 @@ contract Royalties is Ownable {
         collectionSize = _collectionSize;
     }
 
-    /// @dev get collection size
-    /// @return collection size
-    function getCollectionSize() public view returns (uint256) {
-        return collectionSize;
+    /// @dev set creator royalties
+    function setCreatorRoyalties(uint256 _creatorRoyalties) external onlyOwner {
+        creatorRoyalties = _creatorRoyalties;
+    }
+
+    /// @dev set creator royalties
+    function setCommunityRoyalties(uint256 _communityRoyalties) external onlyOwner {
+        communityRoyalties = _communityRoyalties;
     }
 
     /// @dev get total royalties
