@@ -26,9 +26,9 @@ contract Royalties is Ownable {
 
     uint256 public collectionSize = 10000;
 
-    address public tokenFeesAddress;
-    address public creatorAddress;
-    address public collectionAddress;
+    address public tokenFeesAddress; // WAVAX / WBNB / WETH / WMATIC
+    address public creatorAddress; // the creator address
+    address public collectionAddress; // the collection address
 
     mapping(uint256 => uint256) private communityClaims;
 
